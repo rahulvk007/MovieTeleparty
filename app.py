@@ -1,58 +1,52 @@
+import os
+import redis
 from flask import Flask, render_template, request, jsonify
-import uuid
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key'
 
-# Global store for sessions
-sessions = {}
+# Redis Configuration
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("home.html")
+    return render_template('home.html')
 
-@app.route("/create_session", methods=["GET", "POST"])
+@app.route('/create_session', methods=['POST'])
 def create_session():
-    if request.method == "POST":
-        stream_url = request.form.get("stream_url")
-        session_code = str(uuid.uuid4())[:6]  # Generate a 6-character session code
-        sessions[session_code] = {"stream_url": stream_url, "position": 0, "paused": True}
-        print(f"[DEBUG] New session created: {session_code}, Stream URL: {stream_url}")
-        return render_template("watch.html", role="admin", session_code=session_code, stream_url=stream_url)
-    return render_template("create_session.html")
+    stream_url = request.form['stream_url']
+    session_code = "session123"  # Replace with random unique code logic
+    redis_client.hmset(session_code, {"stream_url": stream_url, "position": 0, "paused": True})
+    return jsonify({"session_code": session_code})
 
-@app.route("/join_session", methods=["GET", "POST"])
+@app.route('/join_session', methods=['POST'])
 def join_session():
-    if request.method == "POST":
-        session_code = request.form.get("session_code")
-        if session_code in sessions:
-            stream_url = sessions[session_code]["stream_url"]
-            print(f"[DEBUG] User joined session: {session_code}")
-            return render_template("watch.html", role="friend", session_code=session_code, stream_url=stream_url)
-        else:
-            print("[DEBUG] Invalid session code entered")
-            return "Invalid Session Code", 400
-    return render_template("join_session.html")
+    session_code = request.form['session_code']
+    if redis_client.exists(session_code):
+        stream_url = redis_client.hget(session_code, "stream_url")
+        return jsonify({"stream_url": stream_url})
+    return jsonify({"error": "Invalid session"}), 400
 
-@app.route("/sync", methods=["POST"])
+@app.route('/sync', methods=['POST'])
 def sync():
-    data = request.get_json()
-    session_code = data.get("session_code")
-    role = data.get("role")
-    
-    if session_code in sessions:
-        session = sessions[session_code]
+    session_code = request.form['session_code']
+    if redis_client.exists(session_code):
+        position = redis_client.hget(session_code, "position")
+        paused = redis_client.hget(session_code, "paused")
+        return jsonify({"position": position, "paused": paused})
+    return jsonify({"error": "Invalid session"}), 400
 
-        if role == "admin":
-            # Update session state from admin
-            session["position"] = data.get("position")
-            session["paused"] = data.get("paused")
-            print(f"[DEBUG] Admin Sync -> Position: {session['position']:.2f}, Paused: {session['paused']}")
-        
-        # Send sync data to friends
-        print(f"[DEBUG] Friend Sync -> Position Sent: {session['position']:.2f}, Paused: {session['paused']}")
-        return jsonify(session)
+@app.route('/update_sync', methods=['POST'])
+def update_sync():
+    session_code = request.form['session_code']
+    position = request.form['position']
+    paused = request.form['paused']
+    if redis_client.exists(session_code):
+        redis_client.hmset(session_code, {"position": position, "paused": paused})
+        return jsonify({"success": True})
+    return jsonify({"error": "Invalid session"}), 400
 
-    return "Session not found", 404
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
