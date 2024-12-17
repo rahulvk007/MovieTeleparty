@@ -1,21 +1,16 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  watch-together:
+  web:
     build: .
     ports:
       - "8000:8000"
-    container_name: watch-together
-    restart: always
+    environment:
+      - REDIS_HOST=redis  # Tell the Flask app to connect to the 'redis' service
     depends_on:
       - redis
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
 
   redis:
-    image: redis:6-alpine
-    container_name: watch-redis
+    image: "redis:alpine"
     ports:
       - "6379:6379"
-    restart: always
