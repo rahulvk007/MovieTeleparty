@@ -1,52 +1,64 @@
-import os
-import redis
 from flask import Flask, render_template, request, jsonify
+import uuid
+import redis
+import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'
 
 # Redis Configuration
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template('home.html')
+    return render_template("home.html")
 
-@app.route('/create_session', methods=['POST'])
+@app.route("/create_session", methods=["GET", "POST"])
 def create_session():
-    stream_url = request.form['stream_url']
-    session_code = "session123"  # Replace with random unique code logic
-    redis_client.hmset(session_code, {"stream_url": stream_url, "position": 0, "paused": True})
-    return jsonify({"session_code": session_code})
+    if request.method == "POST":
+        stream_url = request.form.get("stream_url")
+        session_code = str(uuid.uuid4())[:6]  # Generate a 6-character session code
+        
+        # Store session in Redis
+        redis_client.hmset(session_code, {"stream_url": stream_url, "position": 0, "paused": True})
+        print(f"[DEBUG] New session created: {session_code}, Stream URL: {stream_url}")
+        
+        return render_template("watch.html", role="admin", session_code=session_code, stream_url=stream_url)
+    return render_template("create_session.html")
 
-@app.route('/join_session', methods=['POST'])
+@app.route("/join_session", methods=["GET", "POST"])
 def join_session():
-    session_code = request.form['session_code']
-    if redis_client.exists(session_code):
-        stream_url = redis_client.hget(session_code, "stream_url")
-        return jsonify({"stream_url": stream_url})
-    return jsonify({"error": "Invalid session"}), 400
+    if request.method == "POST":
+        session_code = request.form.get("session_code")
+        if redis_client.exists(session_code):
+            stream_url = redis_client.hget(session_code, "stream_url")
+            print(f"[DEBUG] User joined session: {session_code}")
+            return render_template("watch.html", role="friend", session_code=session_code, stream_url=stream_url)
+        else:
+            print("[DEBUG] Invalid session code entered")
+            return "Invalid Session Code", 400
+    return render_template("join_session.html")
 
-@app.route('/sync', methods=['POST'])
+@app.route("/sync", methods=["POST"])
 def sync():
-    session_code = request.form['session_code']
+    data = request.get_json()
+    session_code = data.get("session_code")
+    role = data.get("role")
+    
     if redis_client.exists(session_code):
-        position = redis_client.hget(session_code, "position")
-        paused = redis_client.hget(session_code, "paused")
-        return jsonify({"position": position, "paused": paused})
-    return jsonify({"error": "Invalid session"}), 400
+        session = redis_client.hgetall(session_code)
 
-@app.route('/update_sync', methods=['POST'])
-def update_sync():
-    session_code = request.form['session_code']
-    position = request.form['position']
-    paused = request.form['paused']
-    if redis_client.exists(session_code):
-        redis_client.hmset(session_code, {"position": position, "paused": paused})
-        return jsonify({"success": True})
-    return jsonify({"error": "Invalid session"}), 400
+        if role == "admin":
+            # Update session state from admin
+            redis_client.hmset(session_code, {"position": data.get("position"), "paused": data.get("paused")})
+            print(f"[DEBUG] Admin Sync -> Position: {data.get('position'):.2f}, Paused: {data.get('paused')}")
+        
+        # Send sync data to friends
+        print(f"[DEBUG] Friend Sync -> Position Sent: {session['position']:.2f}, Paused: {session['paused']}")
+        return jsonify(session)
 
-if __name__ == '__main__':
+    return "Session not found", 404
+
+if __name__ == "__main__":
     app.run(debug=True)
