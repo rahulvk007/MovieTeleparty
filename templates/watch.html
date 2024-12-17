@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Watch Together</title>
+    <script src="{{ url_for('static', filename='sync.js') }}"></script>
+</head>
+<body>
+    <h1>Session Code: {{ session_code }}</h1>
+    <video id="videoPlayer" width="800" controls>
+        <source src="{{ stream_url }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        const role = "{{ role }}";
+        const sessionCode = "{{ session_code }}";
+        const video = document.getElementById("videoPlayer");
+        const syncUrl = "/sync";
+
+        startSync(video, syncUrl, role, sessionCode);
+    </script>
+</body>
+</html>
