@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Watch Together</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Together - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Welcome to Watch Together</h1>
-    <button onclick="window.location.href='/create_session'">Create Session</button>
-    <button onclick="window.location.href='/join_session'">Join Session</button>
+    <div class="container">
+        <h1>Welcome to Watch Together!</h1>
+        <div class="options">
+            <a href="{{ url_for('create_session') }}" class="button">Create Session</a>
+            <a href="{{ url_for('join_session') }}" class="button">Join Session</a>
+        </div>
+    </div>
 </body>
 </html>

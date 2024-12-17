@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Session</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Create a Session</h1>
-    <form method="POST">
-        <label>Stream URL:</label>
-        <input type="text" name="stream_url" required>
-        <button type="submit">Create</button>
-    </form>
+    <div class="container">
+        <h1>Create a New Session</h1>
+        <form method="POST">
+            <label for="stream_url">Stream URL:</label>
+            <input type="text" name="stream_url" id="stream_url" placeholder="Enter Stream URL" required>
+            <button type="submit" class="button">Create Session</button>
+        </form>
+    </div>
 </body>
 </html>

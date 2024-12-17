@@ -1,22 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Watch Together</title>
-    <script src="{{ url_for('static', filename='sync.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Session Code: {{ session_code }}</h1>
-    <video id="videoPlayer" width="800" controls>
-        <source src="{{ stream_url }}" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-
+    <div class="container">
+        <h1>Watch Together</h1>
+        <video id="videoPlayer" controls>
+            <source src="{{ stream_url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <p>Session Code: <strong>{{ session_code }}</strong></p>
+    </div>
+    <script src="{{ url_for('static', filename='sync.js') }}"></script>
     <script>
+        const video = document.getElementById("videoPlayer");
+        const syncUrl = "{{ url_for('sync') }}";
         const role = "{{ role }}";
         const sessionCode = "{{ session_code }}";
-        const video = document.getElementById("videoPlayer");
-        const syncUrl = "/sync";
-
         startSync(video, syncUrl, role, sessionCode);
     </script>
 </body>
